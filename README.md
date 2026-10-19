@@ -91,6 +91,16 @@ The patterns in this project fit the economic picture, although they are observe
 
 ## Dataset
 
+## Handling Class Imbalance
+
+The dataset is imbalanced: about **17.5% of customers are "Yes"** and **82.5% are "No"**.
+
+![Target Distribution](outputs/figures/target_distribution.png)
+
+- **Why it matters:** Predicting "No" for every customer would be about 82.5% accurate while finding no buyers at all, so accuracy is misleading.
+- **What was done:** ROC-AUC was used as the metric because it measures how well buyers are ranked above non-buyers, and stratified cross-validation kept the 17.5% / 82.5% split in every fold.
+- **Decision:** Class weighting did not improve ROC-AUC (0.9417 versus 0.9418), so the original class distribution was kept.
+
 - `train.csv`: 668,665 rows and 15 columns, including the target.
 - `test.csv`: 286,571 rows and 14 feature columns, without target labels.
 - The source data was checked for missing values and duplicate rows or IDs.
@@ -169,7 +179,16 @@ The final blend combined:
 
 The blend achieved a reported out-of-fold ROC-AUC of **0.9419**, a small improvement over the individual models.
 
-A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data. It does not mean that 94.19% of predictions are correct. The ROC curve is saved in `outputs/figures/ROC_CURVES.png`.
+
+![ROC MODEL COMPARISON CURVES ](outputs/figures/ROC_CURVES.png)
+
+A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data. It does not mean that 94.19% of predictions are correct. 
+
+- **Strong separation from chance:** All models sit far above the random-guess diagonal (AUC 0.50), with AUC scores between 0.9349 and 0.9418, so they rank likely EV buyers well above non-buyers.
+
+- **Tuning gave a small but consistent gain:** Tuned LightGBM and tuned XGBoost both reach an AUC of 0.9418, ahead of their untuned versions (0.9414 and 0.9415) and of CatBoost (0.9404).
+
+- **Random Forest lags slightly:** Its curve dips below the others between roughly 0.15 and 0.35 false positive rate (AUC 0.9349), while the rest of the models are tightly clustered, which suggests the signal in the data is strong and easy to learn.
 
 - **Strong separation from chance:** All models sit far above the random-guess diagonal (AUC 0.50), with AUC scores between 0.9349 and 0.9418, so they rank likely EV buyers well above non-buyers.
 - **Tuning gave a small but consistent gain:** Tuned LightGBM and tuned XGBoost both reach an AUC of 0.9418, ahead of their untuned versions (0.9414 and 0.9415) and of CatBoost (0.9404).
@@ -181,7 +200,9 @@ The analyses (feature importance and SHAP) highlighted subsidy-related features,
 
 ## Model Calibration
 
-Predicted probabilities from tuned LightGBM were compared with observed frequencies across 10 quantile bins on a hold-out set. Calibration was reported as close to the ideal diagonal, so a separate isotonic or Platt calibration step was not applied. The calibration curve is saved in `outputs/figures/calibration_curve.png`.
+![Model Calibration ](outputs/figures/calibration_curve.png)
+
+Predicted probabilities from tuned LightGBM were compared with observed frequencies across 10 quantile bins on a hold-out set. Calibration was reported as close to the ideal diagonal, so a separate isotonic or Platt calibration step was not applied. outputs/figures/calibration_curve.png`.
 
 ## Error Analysis and Fairness
 
