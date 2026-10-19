@@ -1,335 +1,238 @@
-# Predicting Electric Vehicle Purchases
+# Electric Vehicle Purchase Prediction
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
-![ML](https://img.shields.io/badge/Models-LightGBM%20%7C%20XGBoost%20%7C%20CatBoost-orange)
+![Models](https://img.shields.io/badge/Models-LightGBM%20%7C%20XGBoost%20%7C%20CatBoost-orange)
 ![Metric](https://img.shields.io/badge/Metric-ROC--AUC-green)
 ![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
 
-## Overview
+An end-to-end machine learning project that estimates the probability of a customer indicating they would purchase an electric vehicle (EV). It covers exploratory data analysis, feature engineering, model comparison, hyperparameter tuning, ensembling, model explainability, error analysis, fairness checks, and a Streamlit dashboard.
 
-An end-to-end, portfolio-grade machine learning case study that predicts
-the probability a customer will purchase an Electric Vehicle (EV), built
-around a Kaggle-style binary classification competition. The project
-covers the full workflow: business framing, data auditing, EDA, feature
-engineering, model comparison, hyperparameter tuning, explainability,
-calibration, error analysis, fairness review, ensembling, and a deployed
-Streamlit dashboard.
+**Final blended out-of-fold ROC-AUC: 0.9419** using LightGBM and XGBoost.
 
-**Final cross-validated performance: ROC-AUC ≈ 0.9419** (blended LightGBM +
-XGBoost, out-of-fold estimate).
+> **Important context:** This is a Kaggle-style competition dataset, not verified real-world purchase data. Results describe patterns in this dataset and should not be interpreted as proven consumer behaviour or causal effects. Real-world use would require validation on representative, real purchase data.
+
+## Interactive Dashboard
+
+The Streamlit dashboard presents model results, lets users explore feature insights, and generates a prediction for a hypothetical customer profile.
+
+### Dashboard overview
+
+![Dashboard overview](outputs/figures/dashboard-overview.png)
+
+Five models were compared using 3-fold stratified cross-validation. XGBoost and LightGBM had the highest baseline ROC-AUC scores, and a blend of tuned versions produced a small improvement.
+
+### Customer explorer: live prediction
+
+![EV purchase prediction](outputs/figures/dashboard-prediction.png)
+
+Users can enter a hypothetical customer profile and view the model's estimated purchase probability. In the example shown, the predicted probability is **5.5%**. This is a model estimate, not a guarantee of an individual's behaviour.
+
+### Model insights
+
+![Model insights](outputs/figures/dashboard-insights.png)
+
+Feature importance varies by model and importance method. Across the analyses, subsidy availability, environmental concern, income, and range anxiety were among the important predictive signals.
+
+### Business insights
+
+![Business insights](outputs/figures/dashboard-business.png)
+
+In this dataset, the observed purchase rate was approximately 27.5% where a subsidy was available and 0.6% where it was not. Rates also varied with environmental concern and range anxiety. These are associations in the dataset, not evidence that any single factor causes a purchase.
 
 ## Business Problem
 
-> Can machine learning identify customers who are more likely to purchase
-> an electric vehicle, based on their demographic, financial, vehicle,
-> environmental, and infrastructure-access characteristics?
+Can machine learning rank customers by their likelihood of indicating that they would purchase an EV, using demographic, financial, vehicle, environmental, and charging-access features?
 
-## Who Can Benefit from This Project?
+Potential applications include:
 
-This project helps predict which people are more likely to buy an electric vehicle (EV). It can help different groups make better decisions.
+- **EV manufacturers and dealerships:** prioritise customer outreach and offers.
+- **Marketing teams:** identify groups for further research and targeted campaigns.
+- **EV financing providers:** understand potential interest in EV finance products.
+- **Policy and sustainability teams:** explore patterns that may warrant further investigation.
 
-- **EV Manufacturers and Car Dealers:** Identify people who may be interested in buying an electric car and focus their sales efforts on those customers.
-
-- **EV Loan and Financing Companies:** Understand which customers may be interested in getting a loan to buy an electric vehicle.
-
-- **Charging Station Providers:** Identify areas where more people may want to use electric cars and plan where to build charging stations.
-
-- **Marketing Teams:** Find groups of people who are more likely to buy electric vehicles and create advertisements that match their needs and interests.
-
-- **Government and Environmental Planners:** Understand which groups of people may need support, such as financial assistance or more charging stations, to make electric vehicles easier to buy and use.
-
-### Why Is This Project Important?
-
-By ranking people according to how likely they are to buy an electric vehicle, this project can help businesses plan their sales activities, improve marketing, and make better decisions about where to invest. It can also help governments identify ways to encourage more people to switch to cleaner transportation.
-
-**In simple terms:** This project uses machine learning to help answer the question, *"Who is most likely to buy an electric vehicle, and how can we use this information to make better decisions?"*
-
-Importantly, this is a **Kaggle-style competition dataset**, not verified
-real-world purchase records. The findings below describe patterns *in this
-dataset* — they are a demonstration of a modelling workflow, not a
-validated claim about real consumer behavior. Any production use would
-need revalidation on real, representative data.
+The model should support analysis rather than make consequential decisions on its own. The dataset does not contain enough geographic and market information to determine where charging stations should be built.
 
 ## Dataset
 
-- `train.csv`: 668,665 rows, 15 columns (14 features + target)
-- `test.csv`: 286,571 rows, 14 columns (no target)
-- No missing values, no duplicate rows or ids in either file
-- Feature set: `Age`, `Annual_Income_USD`, `Daily_Commute_km`,
-  `Number_of_Cars_Owned`, `Charging_Stations_Near_Home`,
-  `Charging_Stations_Near_Work`, `Environmental_Concern_Level`, `Gender`,
-  `City_Type`, `Current_Car_Type`, `Home_Charging_Possible`,
-  `Subsidy_Available`, `Range_Anxiety_Level`
+- `train.csv`: 668,665 rows and 15 columns, including the target.
+- `test.csv`: 286,571 rows and 14 feature columns, without target labels.
+- The source files were checked for missing values and duplicate rows or IDs.
+- Features include age, annual income, commute distance, number of cars owned, charging-station counts, environmental concern, gender, city type, current car type, home charging possibility, subsidy availability, and range anxiety.
 
-## Target Variable
+### Target and class imbalance
 
-**`Will_Buy_EV`** is the target variable. It tells us whether a person is willing to buy an electric vehicle (EV).
+The target is `Will_Buy_EV`:
 
-- **`Yes` = 1:** The person is willing to buy an electric vehicle.
-- **`No` = 0:** The person is not willing to buy an electric vehicle.
+- `Yes = 1`: indicates willingness to buy an EV.
+- `No = 0`: indicates unwillingness to buy an EV.
 
-### Class Imbalance
+The target distribution is approximately **17.5% Yes** and **82.5% No**. Class weighting was tested but did not improve ROC-AUC: the reported score was 0.9418 without weighting and 0.9417 with weighting. The final approach therefore retained the original class distribution.
 
-The dataset is **imbalanced** because the two groups do not have an equal number of people:
-
-- **17.5% Yes:** People willing to buy an EV.
-- **82.5% No:** People not willing to buy an EV.
-
-This means that for every person who is willing to buy an EV, there are about 4.7 people who are not. This difference can make it harder for a model to identify people who are likely to buy an EV.
-
-### Why Did We Not Use Class Weighting?
-
-Class weighting is a technique that gives more importance to the smaller group during model training. We tested it to see whether it would improve our model's performance.
-
-However, the cross-validation results showed almost no improvement in ROC-AUC:
-
-- **Without class weighting:** 0.9418 ROC-AUC
-- **With class weighting:** 0.9417 ROC-AUC
-
-Since the model performed slightly better without class weighting, we decided to use the original class distribution for our final models.
-
-**In simple terms:** Our goal is to rank people correctly according to how likely they are to buy an EV. Since class weighting did not improve the model's ability to rank people, we kept the simpler approach without class weighting.
-
-We used **ROC-AUC** to compare the models because it measures how well a model separates people who are likely to buy an EV from those who are not, across different decision thresholds.
-
-The competition scores **predicted probabilities** with ROC-AUC, so the
-submission is not thresholded at 0.5 — raw probabilities are preserved.
+ROC-AUC was used because the competition evaluates predicted probabilities and the metric measures how well the model ranks positive cases above negative cases across thresholds. Predictions were not thresholded at 0.5 for the competition submission.
 
 ## Exploratory Data Analysis
 
 ![Target distribution](outputs/figures/target_distribution.png)
 ![Numeric distributions](outputs/figures/numeric_distributions.png)
 ![Categorical distributions](outputs/figures/categorical_distributions.png)
-
-Three features show a strong, near-monotonic relationship with purchase
-likelihood:
-
-| Driver | Observed Will_Buy_EV rate |
-|---|---|
-| `Subsidy_Available` = Yes | 27.5% |
-| `Subsidy_Available` = No | 0.6% |
-| `Environmental_Concern_Level` = 5 (highest) | 51.8% |
-| `Environmental_Concern_Level` = 1 (lowest) | 0.6% |
-| `Range_Anxiety_Level` = Low | 18.9% |
-| `Range_Anxiety_Level` = High | 0.1% |
-
 ![Target rate by driver](outputs/figures/target_rate_by_driver.png)
 ![Correlation heatmap](outputs/figures/correlation_heatmap.png)
 
-These are strong *associations*, not causal claims — the data does not
-support concluding, for example, that a subsidy alone would cause a
-customer to buy an EV.
+Selected observed purchase rates:
+
+| Feature group | Observed `Will_Buy_EV` rate |
+|---|---:|
+| Subsidy available | 27.5% |
+| No subsidy available | 0.6% |
+| Environmental concern level 5 | 51.8% |
+| Environmental concern level 1 | 0.6% |
+| Low range anxiety | 18.9% |
+| High range anxiety | 0.1% |
+
+These figures show associations in this dataset; they do not establish causation.
 
 ## Feature Engineering
 
-New features were built only from information already present in a row
-(no cross-row aggregation, no target usage), so they carry no leakage risk:
+New features were derived from information already present in each row, without using the target:
 
-- `Age_Group`, `Income_Band` — bucketed versions of continuous fields, useful for linear models and readability
-- `Total_Charging_Access` — sum of home + work charging station counts
-- `Commute_Intensity` — bucketed daily commute distance
-- `Subsidy_x_MidLowIncome` — interaction between subsidy availability and below-median income, testing whether subsidies matter more for less-affluent buyers
-- `Multi_Car_Household` — flag for owning 2+ cars
+- `Age_Group` and `Income_Band`: grouped age and income values.
+- `Total_Charging_Access`: combined home and work charging-station counts.
+- `Commute_Intensity`: grouped daily commute distance.
+- `Subsidy_x_MidLowIncome`: interaction between subsidy availability and below-median income.
+- `Multi_Car_Household`: indicator for owning two or more cars.
 
-## Validation Strategy
+## Model Development and Validation
 
-**Stratified K-Fold Cross-Validation** was used throughout, preserving the
-17.5%/82.5% class balance in every fold — appropriate since this is a
-single-snapshot binary classification problem with no evidence of repeated
-customers, time ordering, or grouped structure (checked: `id` is a simple
-unique row index in both files, and there are no timestamp or grouping
-columns).
+Stratified 3-fold cross-validation was used to preserve the target class balance in each fold. This was selected to manage computing time. The data was treated as a single-snapshot binary classification problem; the available columns did not indicate a time-based or grouped split requirement.
 
-## Computing Resources
+### Baseline model comparison
 
-In simple terms: Because computing resources were limited, we used 3-fold cross-validation to save time. We then checked the model using both cross-validation and a separate test set to get a more reliable picture of its performance.
-
-## Models Tested
-
-| Model | CV ROC-AUC Mean | CV ROC-AUC Std |
+| Model | Mean CV ROC-AUC | CV ROC-AUC standard deviation |
 |---|---:|---:|
-| XGBoost (default params) | 0.9415 | 0.0006 |
-| LightGBM (default params) | 0.9414 | 0.0006 |
-| CatBoost (default params, reduced iterations for compute) | 0.9404 | 0.0007 |
-| Logistic Regression (baseline) | 0.9383 | 0.0007 |
+| XGBoost | 0.9415 | 0.0006 |
+| LightGBM | 0.9414 | 0.0006 |
+| CatBoost | 0.9404 | 0.0007 |
+| Logistic Regression | 0.9383 | 0.0007 |
 | Random Forest | 0.9349 | 0.0005 |
 
 ![Model comparison](outputs/figures/model_comparison.png)
 
-## Hyperparameter Optimization
+Optuna was used to tune LightGBM and XGBoost with ROC-AUC as the optimization metric. After approximately 18–20 trials per model, each tuned model achieved a reported validation AUC of 0.9417.
 
-Optuna (Bayesian/TPE search) was used to tune LightGBM and XGBoost,
-optimizing directly for **ROC-AUC** on a held-out validation split (not
-accuracy). After 18–20 trials each:
+### Ensembling and final performance
 
-- **Tuned LightGBM**: AUC = 0.9417 (`n_estimators=502, learning_rate=0.073, num_leaves=17, max_depth=5, ...`)
-- **Tuned XGBoost**: AUC = 0.9417 (`n_estimators=515, learning_rate=0.095, max_depth=4, min_child_weight=11, ...`)
-
-## Model Ensembling
-
-I combined predictions from LightGBM and XGBoost to improve the model's ability to predict which customers are likely to buy an electric vehicle (EV). I tested different combinations of the models to find the best balance, rather than choosing the weights randomly.
-
-The best-performing combination used 48% of LightGBM’s predictions and 52% of XGBoost’s predictions, with these weights selected through testing to achieve the best overall prediction performance.
-
-The combined model achieved an **OOF ROC-AUC of 0.9419**, a small improvement over either model used alone (0.9418).
-
-## ROC-AUC
-
-ROC-AUC measures how well a model distinguishes between customers who are likely to buy an EV and those who are not.
-
-A score of **0.9419** means the model has about a **94% chance of ranking a randomly selected EV buyer as more likely to purchase than a randomly selected non-buyer**.
-
-From a business perspective, this can help EV companies identify potential customers more effectively, target their marketing campaigns, and allocate advertising budgets more efficiently.
+The final blend combined **48% LightGBM** and **52% XGBoost** predictions. The weights were selected by testing combinations. The blend achieved a reported **out-of-fold ROC-AUC of 0.9419**, a small improvement over the individual models.
 
 ![ROC curve](outputs/figures/roc_curve.png)
 
-## Model Calibration
+A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data: a randomly selected positive example is generally ranked above a randomly selected negative example. It does not mean that 94.19% of predictions are correct.
 
-Predicted probabilities from the tuned LightGBM were checked against
-observed frequencies in 10 quantile bins on a hold-out set. Calibration is
-already close to the ideal diagonal (e.g. predicted ≈0.545 vs. observed
-=0.535 in the largest-gap bin), so no separate isotonic/Platt calibration
-step was applied — it would not meaningfully improve this model.
-
-![Calibration curve](outputs/figures/calibration_curve.png)
-
-## Explainability
+## Explainability and Calibration
 
 ![Feature importance](outputs/figures/feature_importance.png)
 ![SHAP summary](outputs/figures/shap_summary.png)
 
-Both native gain importance and SHAP agree on the top drivers:
-`Subsidy_Available`/`Subsidy_Yes`, `Environmental_Concern_Level`,
-`Annual_Income_USD`, and `Range_Anxiety_Level`. The model relies heavily
-on these four signals — this means the model's predictions are, in this
-dataset, largely a story about subsidy access, environmental attitude, and
-income, rather than about vehicle type, charging-station counts, or
-demographics like gender.
+Native gain-based importance and SHAP analyses highlighted subsidy-related features, environmental concern, annual income, and range anxiety. Feature importance describes model associations and should not be interpreted as causal evidence.
 
-## Error Analysis
+Predicted probabilities from tuned LightGBM were checked against observed frequencies across 10 quantile bins on a hold-out set. Calibration was reported as close to the ideal diagonal; a separate isotonic or Platt calibration step was not applied because it was not expected to provide meaningful improvement.
 
-The model was evaluated on a separate hold-out dataset to assess how well it predicts customers' likelihood of buying an electric vehicle (EV).
+![Calibration curve](outputs/figures/calibration_curve.png)
 
-- **74.8% high-confidence and correct:** The model made confident predictions that matched the actual customer outcomes.
-- **2.5% high-confidence but incorrect:** The model was confident in its predictions but got the actual outcomes wrong.
-- **6.1% uncertain predictions:** The model assigned probabilities between 40% and 60%, indicating uncertainty about whether these customers would buy an EV.
+## Error Analysis and Fairness Checks
 
-### Performance by City Type
+On the reported hold-out evaluation:
 
-The model achieved a ROC-AUC of **0.945 in Urban areas** and **0.937 in Rural areas**. This indicates that the model was slightly better at distinguishing potential buyers from non-buyers in urban areas.
+- **74.8%** of predictions were high-confidence and correct.
+- **2.5%** were high-confidence but incorrect.
+- **6.1%** had probabilities in the uncertain 0.40–0.60 range.
 
-One possible explanation is that differences in charging infrastructure and access to charging stations may influence EV purchasing decisions in rural areas. However, further analysis would be needed to confirm this.
+Reported ROC-AUC by city type was **0.945 for Urban** and **0.937 for Rural**. The reason for this difference has not been established and would require further investigation.
 
-Overall, the results show that the model performs well, but some predictions remain uncertain or incorrect and may require further investigation.
-
-## Responsible AI and Fairness
-
-The model's performance was almost the same for female and male customers. The AUC score was 0.9418 for females and 0.9419 for males. For customers who selected "Other" as their gender, the score was 0.9294. This group had a much smaller sample size (about 1,034 customers), so more data is needed before drawing conclusions about any performance difference.
-
-`Subsidy_Available` and `Environmental_Concern_Level` are not demographic characteristics. However, they may be related to protected groups, so this should be checked before using the model for important decisions, such as loan eligibility.
-
-The `Gender` and `City_Type` columns were included in the analysis to help identify possible differences in model performance across groups.
-
-## Business Impact
-
-The model could help businesses in several ways:
-
-- **Marketing:** Identify customers who are more likely to buy an electric vehicle (EV).
-- **Sales:** Rank potential customers based on their predicted interest.
-- **Financing:** Identify potential customers who may be interested in EV loan products.
-- **Dealership promotions:** Help businesses target customers with suitable offers.
-
-However, the model should not be used alone to decide where to build charging stations because the dataset does not contain enough geographical and market information.
-
-The model also cannot prove that a particular action, such as offering a subsidy, will cause someone to buy an EV. It only identifies patterns in the available data.
-
-## Customer Segmentation
-
-The model predicts the probability that a customer will buy an electric vehicle. Based on these predictions, customers can be grouped into three categories:
-
-- **High interest:** Customers with a high predicted probability of buying an EV.
-- **Medium interest:** Customers with a moderate predicted probability.
-- **Low interest:** Customers with a low predicted probability.
-
-Businesses can use these groups to plan different marketing strategies. However, these categories are based on the model's predictions and do not guarantee what an individual customer will actually do.
+Reported ROC-AUC by gender was **0.9418 for Female**, **0.9419 for Male**, and **0.9294 for Other**. The Other group was much smaller (approximately 1,034 customers in the reported analysis), so its result is less certain. Subsidy availability and environmental concern may also correlate with demographic or socioeconomic characteristics. Further fairness testing would be necessary before any consequential use.
 
 ## Limitations
 
-- **Limited data over time:** The dataset represents a single snapshot and does not track customers over time or confirm their actual purchases.
-- **CatBoost model:** CatBoost was tested with fewer training iterations than LightGBM and XGBoost because of limited computing resources. It was also not extensively tuned to find its best settings.
-- **Cross-validation:** Three folds were used instead of five to reduce computing time during model comparison.
-- **Small gender group:** The "Other" gender group had approximately 1,000 customers in the hold-out dataset. Therefore, the fairness results for this group are less certain and should be checked with more data.
+- The dataset is a single snapshot and does not confirm actual EV purchases or track behaviour over time.
+- Three-fold cross-validation was used to reduce computing time.
+- CatBoost used fewer training iterations and was not tuned as extensively as LightGBM and XGBoost.
+- Fairness estimates for the smaller gender group are less certain.
+- Findings are associations, not causal effects, and require validation on representative real-world data before deployment in business decisions.
 
 ## Deployment
 
-A Streamlit dashboard (`app/app.py`) allows users to enter example customer details and view the model's predicted probability of buying an electric vehicle.
-
-The dashboard also displays model performance results and explainability information to help users understand how the model makes its predictions.
+The Streamlit application is located at `app/app.py`. It allows users to enter example customer details, view an estimated purchase probability, and explore model performance and explainability information.
 
 ## Project Structure
 
-```
+```text
 EV-Purchase-Prediction/
-│
-├── data/                     # train.csv, test.csv, sample_submission.csv
+├── data/                  # Dataset files
 ├── notebooks/
 │   └── EV_Purchase_Prediction.ipynb
 ├── src/
 │   ├── data_preprocessing.py
 │   ├── feature_engineering.py
-│   ├── train.py               # CV model comparison
-│   ├── tune.py                 # Optuna hyperparameter search
-│   ├── generate_tuned_oof.py   # OOF predictions for blending
+│   ├── train.py
+│   ├── tune.py
+│   ├── generate_tuned_oof.py
 │   ├── imbalance_check.py
-│   ├── evaluate.py             # explainability, calibration, error analysis
-│   ├── make_plots.py / make_model_plots.py
-│   └── predict.py              # trains final blend, writes submission.csv
-├── models/                    # saved model artifacts (.pkl)
+│   ├── evaluate.py
+│   ├── make_plots.py
+│   ├── make_model_plots.py
+│   └── predict.py
+├── models/                # Saved model artifacts
 ├── outputs/
 │   ├── submission.csv
 │   ├── feature_importance.csv
 │   ├── model_comparison.csv
 │   └── figures/
 ├── app/
-│   └── app.py                  # Streamlit dashboard
+│   └── app.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore
 ```
 
-## Technologies Used
+## Technologies
 
-Python | Pandas | NumPy | Scikit-learn | XGBoost | LightGBM | CatBoost |
-SHAP | Optuna | Feature Engineering | Stratified Cross-Validation |
-ROC-AUC | Model Explainability | Streamlit | Matplotlib / Seaborn
+Python 3.12, Pandas, NumPy, scikit-learn, LightGBM, XGBoost, CatBoost, SHAP, Optuna, Matplotlib, Seaborn, and Streamlit.
 
 ## How to Run
 
+Create and activate a Python environment, then install the dependencies:
+
 ```bash
 pip install -r requirements.txt
+```
 
-# 1. Compare baseline models (run once per model)
+Run the dashboard:
+
+```bash
+streamlit run app/app.py
+```
+
+The following commands show the training workflow used in this project. Run them from the repository root and check each script's available arguments if needed:
+
+```bash
+# Compare baseline models
 python src/train.py --model LightGBM
 
-# 2. Tune hyperparameters
+# Tune hyperparameters
 python src/tune.py --model lightgbm --n_trials 20
 
-# 3. Generate OOF predictions for blending
+# Generate out-of-fold predictions
 python src/generate_tuned_oof.py --model lightgbm_tuned
 
-# 4. Explainability, calibration, error analysis
+# Run evaluation and analysis
 python src/evaluate.py
 
-# 5. Train final blended model and write submission.csv
+# Train the final blend and create submission.csv
 python src/predict.py
-
-# 6. Launch the dashboard
-streamlit run app/app.py
 ```
 
 ## Future Improvements
 
-- **Improve model evaluation:** Use 5-fold cross-validation and fine-tune CatBoost on a computer with more processing power to get more reliable results.
-- **Improve categorical data handling:** Use better encoding methods if more categories or new categorical features are added to the dataset.
-- **Add more external data:** Include dealership locations and local charging station information to improve insights for EV market and infrastructure planning.
-- **Test with real-world data:** Compare the model's predictions with actual EV purchases to check how well it performs before using it in real business decisions.
+- Evaluate with 5-fold cross-validation and tune CatBoost more extensively when computing resources allow.
+- Test the model against real-world purchase outcomes and assess performance drift over time.
+- Explore additional market and geographic data for more robust business insights.
+- Expand fairness and subgroup evaluation using larger, representative samples.
