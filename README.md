@@ -1,4 +1,3 @@
-
 # Electric Vehicle Purchase Prediction
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
@@ -24,27 +23,25 @@ The Streamlit dashboard allows users to explore model performance, understand im
 
 ![Dashboard Overview](outputs/figures/dashboard_overview.png)
 
-Five models were compared using stratified cross-validation. XGBoost and LightGBM achieved the strongest baseline ROC-AUC scores.
+**Insight:** Five models were compared using stratified cross-validation. XGBoost (0.9415) and LightGBM (0.9414) achieved the strongest baseline ROC-AUC scores, ahead of CatBoost, Logistic Regression and Random Forest. Blending the two tuned models gives the final out-of-fold ROC-AUC of 0.9419.
 
-### 2. Customer Explorer — Live Prediction
+### 2. Customer Explorer: Live Prediction
 
 ![EV Purchase Prediction](outputs/figures/dashboard_prediction.png)
 
-Users can enter customer characteristics and receive an estimated probability of EV purchase. In the example shown, the predicted probability is 5.5%. This is a model estimate, not a guarantee of individual behaviour.
+**Insight:** Users enter customer characteristics and receive an estimated probability of EV purchase. In the example shown, the predicted probability is 5.5%, a lower-likelihood result. This is a model estimate, not a guarantee of individual behaviour.
 
 ### 3. Model Insights
 
 ![Model Insights](outputs/figures/dashboard_insights.png)
 
-
-Explores model feature importance and the factors associated with predicted purchase likelihood.
+**Insight:** Feature importance differs by model. XGBoost relies heavily on subsidy-related features, while LightGBM ranks annual income, daily commute and age highest on split counts. Charging-station counts and demographics contribute far less.
 
 ### 4. Business Insights
 
 ![Business Insights](outputs/figures/dashboard_business.png)
 
-
-Presents observed relationships between EV purchase willingness, subsidy availability, environmental concern, and range anxiety.
+**Insight:** Subsidy availability is the strongest association with purchase willingness (about 27.5% with a subsidy versus 0.6% without). Environmental concern rises from about 0.6% to 51.8%, and range anxiety is strongly linked to lower purchase likelihood. This is consistent with upfront cost being a key barrier (see the economic case below).
 
 ---
 
@@ -60,6 +57,37 @@ Potential applications include:
 - **Policy and sustainability teams:** Investigate patterns relevant to EV adoption.
 
 The model supports exploratory analysis and should not be used alone for consequential decisions or infrastructure investment.
+
+## Why EV Adoption Matters: The Economic Case
+
+Understanding who is likely to buy an EV matters because EV ownership can offer real economic advantages for households and fleets. The main ones are:
+
+- **Lower running costs:** Electricity is typically cheaper per kilometre than petrol or diesel, so drivers with long daily commutes tend to benefit most.
+- **Lower maintenance costs:** EVs have fewer moving parts than combustion-engine vehicles (no oil changes, fewer fluids and no exhaust system), which generally means less routine servicing.
+- **Government incentives:** Purchase subsidies, tax credits and reduced registration or road fees can lower the effective upfront price.
+- **Protection from fuel price swings:** Owners rely less on volatile fuel markets, especially where they can charge at home.
+- **Total cost of ownership:** A higher purchase price is often offset over time by lower fuel and maintenance spending, depending on usage and local prices.
+
+**Trade-offs:** Upfront prices can be higher, and charging access (including installing a home charger) affects both convenience and cost. These are the same barriers reflected in this dataset.
+
+### How the dataset reflects the economics
+
+The patterns in this project fit the economic picture, although they are observed associations and not proof of cause:
+
+- **Subsidy availability** shows the largest gap in the data: the purchase-willingness rate is **27.5% with a subsidy versus 0.6% without**, which suggests that lowering the upfront cost matters a great deal.
+- **Annual income** ranks among the important model features, consistent with affordability affecting willingness to buy.
+- **Daily commute distance** and **charging access** relate to how much a driver could save on running costs and how practical charging is.
+- **Range anxiety** captures a practical concern that can offset the financial benefits.
+
+### Business implications
+
+- **EV manufacturers and dealerships:** Highlight total cost of ownership, not only the sticker price, when targeting high-commute or high-probability customers.
+- **Financing providers:** Design loan products that spread the upfront cost, since subsidies and price appear to be strong barriers.
+- **Policy and sustainability teams:** Use the subsidy finding to explore where incentives or charging access could widen adoption.
+
+> *Economic advantages vary by country, vehicle model, electricity and fuel prices, and available incentives. Evaluate local figures before drawing conclusions for a specific market.*
+
+---
 
 ## Dataset
 
@@ -90,22 +118,6 @@ ROC-AUC measures how well a model ranks positive cases above negative cases acro
 
 ## Exploratory Data Analysis
 
-### Target Distribution
-
-![Target Distribution](outputs/figures/target_distribution.png)
-
-### Numeric Feature Distributions
-
-![Numeric Distributions](outputs/figures/numeric_distributions.png)
-
-### Categorical Feature Distributions
-
-![Categorical Distributions](outputs/figures/categorical_distributions.png)
-
-### Purchase Rate by Key Drivers
-
-![Target Rate by Driver](outputs/figures/target_rate_by_driver.png)
-
 Selected observed purchase-willingness rates:
 
 | Feature | Observed rate |
@@ -119,9 +131,7 @@ Selected observed purchase-willingness rates:
 
 These figures represent associations in the dataset, not causal effects.
 
-### Correlation Analysis
-
-![Correlation Heatmap](outputs/figures/correlation_heatmap.png)
+Additional charts (target distribution, numeric and categorical distributions, purchase rate by driver, and the correlation heatmap) are saved in `outputs/figures/`.
 
 ## Feature Engineering
 
@@ -139,8 +149,6 @@ New features were created from existing row-level information without using the 
 Stratified 3-fold cross-validation was used to preserve the class distribution in each fold and manage computational costs.
 
 ### Baseline Model Comparison
-
-![Model Comparison](outputs/figures/model_comparison.png)
 
 | Model | Mean CV ROC-AUC | Standard deviation |
 |---|---:|---:|
@@ -161,29 +169,19 @@ The final blend combined:
 
 The blend achieved a reported out-of-fold ROC-AUC of **0.9419**, a small improvement over the individual models.
 
-### ROC Curve
+A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data. It does not mean that 94.19% of predictions are correct. The ROC curve is saved in `outputs/figures/ROC_CURVES.png`.
 
-![ROC Curve](outputs/figures/roc_curve.png)
-
-A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data. It does not mean that 94.19% of predictions are correct.
+- **Strong separation from chance:** All models sit far above the random-guess diagonal (AUC 0.50), with AUC scores between 0.9349 and 0.9418, so they rank likely EV buyers well above non-buyers.
+- **Tuning gave a small but consistent gain:** Tuned LightGBM and tuned XGBoost both reach an AUC of 0.9418, ahead of their untuned versions (0.9414 and 0.9415) and of CatBoost (0.9404).
+- **Random Forest lags slightly:** Its curve dips below the others between roughly 0.15 and 0.35 false positive rate (AUC 0.9349), while the rest of the models are tightly clustered, which suggests the signal in the data is strong and easy to learn.
 
 ## Model Explainability
 
-### Feature Importance
-
-![Feature Importance](outputs/figures/feature_importance.png)
-
-### SHAP Summary
-
-![SHAP Summary](outputs/figures/shap_summary.png)
-
-The analyses highlighted subsidy-related features, environmental concern, annual income, and range anxiety. Feature importance describes model behaviour and associations; it does not establish causation.
+The analyses (feature importance and SHAP) highlighted subsidy-related features, environmental concern, annual income, and range anxiety. Feature importance describes model behaviour and associations; it does not establish causation. The SHAP summary and feature importance figures are saved in `outputs/figures/`.
 
 ## Model Calibration
 
-![Calibration Curve](outputs/figures/calibration_curve.png)
-
-Predicted probabilities from tuned LightGBM were compared with observed frequencies across 10 quantile bins on a hold-out set. Calibration was reported as close to the ideal diagonal, so a separate isotonic or Platt calibration step was not applied.
+Predicted probabilities from tuned LightGBM were compared with observed frequencies across 10 quantile bins on a hold-out set. Calibration was reported as close to the ideal diagonal, so a separate isotonic or Platt calibration step was not applied. The calibration curve is saved in `outputs/figures/calibration_curve.png`.
 
 ## Error Analysis and Fairness
 
@@ -219,7 +217,7 @@ The Other group had a substantially smaller sample size, approximately 1,034 cus
 
 ## Deployment
 
-The Streamlit application is located at `app/app.py`. It allows users to enter hypothetical customer details, view estimated EV purchase probabilities, and explore model performance and explainability information.
+The Streamlit application is `app.py` in the project root. It allows users to enter hypothetical customer details, view estimated EV purchase probabilities, and explore model performance and explainability information.
 
 ## Project Structure
 
@@ -245,8 +243,7 @@ EV-Purchase-Prediction/
 │   ├── feature_importance.csv
 │   ├── model_comparison.csv
 │   └── figures/
-├── app/
-│   └── app.py
+├── app.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -254,7 +251,7 @@ EV-Purchase-Prediction/
 
 ## Technologies Used
 
-Python 3.12, Pandas, NumPy, scikit-learn, LightGBM, XGBoost, CatBoost, SHAP, Optuna, Matplotlib, Seaborn, and Streamlit.
+Python 3.12, Pandas, NumPy, scikit-learn, LightGBM, XGBoost, CatBoost, SHAP, Optuna, Matplotlib, Seaborn, Plotly, and Streamlit.
 
 ## How to Run
 
@@ -264,15 +261,14 @@ Install dependencies from the repository root:
 pip install -r requirements.txt
 ```
 
-Launch the dashboard:
+> **Important:** The saved models were trained with **XGBoost 3.4.0, LightGBM 4.7.0 and scikit-learn 1.9.0**. Use these exact versions (pinned in `requirements.txt`) to avoid model-loading errors such as `XGBoostError: input stream corrupted`.
 
 ```bash
-streamlit run app/app.py
+python -m streamlit run app.py
 ```
 
 ### Training Workflow
 
-The following commands reflect the project's training workflow. Check each script's available arguments if your local version differs.
 
 ```bash
 # Compare baseline models
@@ -293,7 +289,14 @@ python src/predict.py
 
 ## Future Improvements
 
+- **Generative AI chatbot (in progress):** Build a chatbot app on top of this project so users can ask questions about EV purchase insights in plain language.
 - Evaluate with 5-fold cross-validation and tune CatBoost more extensively.
 - Test predictions against real-world EV purchase outcomes.
 - Explore additional market and geographic data.
 - Expand fairness evaluation using larger, representative samples.
+
+## Author
+
+**Irene Ayakazi**: Data Scientist and Machine Learning Engineer | Generative AI Learning
+
+[LinkedIn](https://www.linkedin.com/in/irene-ayakazi)
