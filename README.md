@@ -23,7 +23,7 @@ Five models were compared using 3-fold stratified cross-validation. XGBoost and 
 
 ### Customer explorer: live prediction
 
-![EV purchase prediction](outputs/figures/dashboard-prediction.png)
+![EV purchase prediction](outputs/figures/dashboard-Prediction.png)
 
 Users can enter a hypothetical customer profile and view the model's estimated purchase probability. In the example shown, the predicted probability is **5.5%**. This is a model estimate, not a guarantee of an individual's behaviour.
 
