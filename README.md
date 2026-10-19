@@ -179,8 +179,7 @@ The final blend combined:
 
 The blend achieved a reported out-of-fold ROC-AUC of **0.9419**, a small improvement over the individual models.
 
-
-![ROC MODEL COMPARISON CURVES ](outputs/figures/ROC_CURVES.png)
+![ROC Model Comparison Curves](outputs/figures/ROC_CURVES.png)
 
 A ROC-AUC of 0.9419 indicates strong ranking performance on the evaluation data. It does not mean that 94.19% of predictions are correct. 
 
